@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Secrets / config
+.env
+.env.local
+*.secret
+
+# Data and artifacts (large, regeneratable)
+data/
+indices/
+outputs/
+*.faiss
+*.pkl
+*.bm25
+
+# Model caches
+.cache/
+sentence_transformers_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# BMad session output (brainstorming lives outside repo anyway via _bmad-output)
+_bmad-output/
+_bmad/
