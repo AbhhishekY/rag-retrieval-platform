@@ -5,8 +5,8 @@ description = "Production-grade retrieval platform: hybrid BM25+semantic+rerank,
 requires-python = ">=3.11"
 
 dependencies = [
-    # Core retrieval
-    "sentence-transformers>=3.0.0",
+    # Core retrieval — ONNX-based (no PyTorch, smaller install, faster CPU inference)
+    "fastembed>=0.4.0",
     "rank-bm25>=0.2.2",
     "faiss-cpu>=1.8.0",
     "numpy>=1.26,<2.0",

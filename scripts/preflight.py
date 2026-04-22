@@ -11,12 +11,16 @@ from pathlib import Path
 
 
 def ensure_models() -> None:
-    print("[1/3] Pre-downloading sentence-transformers models...")
+    print("[1/3] Pre-downloading FastEmbed (ONNX) models...")
     t0 = time.time()
-    from sentence_transformers import CrossEncoder, SentenceTransformer
+    from fastembed import TextEmbedding
+    from fastembed.rerank.cross_encoder import TextCrossEncoder
 
-    SentenceTransformer("all-MiniLM-L6-v2")
-    CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+    # Downloading triggers the model cache; one dummy embed/rerank confirms it works
+    embed = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    _ = list(embed.embed(["warmup"]))
+    rerank = TextCrossEncoder(model_name="Xenova/ms-marco-MiniLM-L-6-v2")
+    _ = list(rerank.rerank("warmup query", ["warmup doc"]))
     print(f"      models cached in {time.time() - t0:.1f}s")
 
 

@@ -764,36 +764,38 @@ Write `src/rag/retrieve/__init__.py`:
 - [ ] **Step 2:** Write `src/rag/retrieve/embedder.py`
 
 ```python
-"""Thin wrapper around sentence-transformers for query + doc embeddings."""
+"""Thin wrapper around FastEmbed (ONNX Runtime) for query + doc embeddings.
+
+FastEmbed runs `sentence-transformers/all-MiniLM-L6-v2` via ONNX — no PyTorch,
+smaller install, often faster on CPU. The produced vectors are already
+L2-normalized (the default for MiniLM), so cosine similarity == inner product
+in FAISS IndexFlatIP.
+"""
 from __future__ import annotations
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
 
 class Embedder:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
         self.model_name = model_name
-        self.model = SentenceTransformer(model_name)
-        self.dim = self.model.get_sentence_embedding_dimension()
+        self.model = TextEmbedding(model_name=model_name)
+        # Probe one embedding to discover dimension and trigger model download
+        probe = next(iter(self.model.embed(["probe"])))
+        self.dim = int(probe.shape[-1])
 
     def encode_query(self, query: str) -> np.ndarray:
-        """Return a single (dim,) float32 vector, L2-normalized (for cosine via dot)."""
-        vec = self.model.encode(query, normalize_embeddings=True, convert_to_numpy=True)
-        return vec.astype(np.float32)
+        """Return a single (dim,) float32 vector, L2-normalized."""
+        vec = next(iter(self.model.embed([query])))
+        return np.asarray(vec, dtype=np.float32)
 
     def encode_docs(self, texts: list[str], batch_size: int = 64) -> np.ndarray:
         """Return (N, dim) float32 matrix, L2-normalized rows."""
         if not texts:
             return np.zeros((0, self.dim), dtype=np.float32)
-        mat = self.model.encode(
-            texts,
-            normalize_embeddings=True,
-            batch_size=batch_size,
-            show_progress_bar=False,
-            convert_to_numpy=True,
-        )
-        return mat.astype(np.float32)
+        vecs = list(self.model.embed(texts, batch_size=batch_size))
+        return np.vstack(vecs).astype(np.float32)
 ```
 
 - [ ] **Step 3:** Smoke test
@@ -1408,16 +1410,21 @@ git commit -m "feat(retrieve): RRF + weighted-alpha fusion (tested)"
 - [ ] **Step 1:** Write `src/rag/retrieve/reranker.py`
 
 ```python
-"""Cross-encoder reranker wrapper. Always batches predict() in one call."""
+"""Cross-encoder reranker via FastEmbed (ONNX Runtime, no PyTorch).
+
+Uses `Xenova/ms-marco-MiniLM-L-6-v2` — ONNX export of the same model the
+sentence-transformers `cross-encoder/ms-marco-MiniLM-L-6-v2` uses.
+One call reranks all candidates in a batched forward pass.
+"""
 from __future__ import annotations
 
-from sentence_transformers import CrossEncoder
+from fastembed.rerank.cross_encoder import TextCrossEncoder
 
 
 class Reranker:
-    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
+    def __init__(self, model_name: str = "Xenova/ms-marco-MiniLM-L-6-v2"):
         self.model_name = model_name
-        self.model = CrossEncoder(model_name)
+        self.model = TextCrossEncoder(model_name=model_name)
 
     def rerank(
         self,
@@ -1426,11 +1433,11 @@ class Reranker:
         top_k: int = 5,
         batch_size: int = 32,
     ) -> list[tuple[str, float]]:
-        """Score all candidates in ONE predict call, return top-k sorted desc."""
+        """Score all candidates in ONE rerank call, return top-k sorted desc."""
         if not candidates:
             return []
-        pairs = [(query, text) for _, text in candidates]
-        scores = self.model.predict(pairs, batch_size=batch_size, show_progress_bar=False)
+        docs = [text for _, text in candidates]
+        scores = list(self.model.rerank(query, docs, batch_size=batch_size))
         scored = [(cid, float(s)) for (cid, _), s in zip(candidates, scores)]
         scored.sort(key=lambda x: x[1], reverse=True)
         return scored[:top_k]
