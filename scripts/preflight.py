@@ -25,32 +25,35 @@ def ensure_models() -> None:
 
 
 def fetch_multihop_rag(data_dir: Path) -> None:
-    print("[2/3] Downloading MultiHop-RAG benchmark...")
+    print("[2/3] Downloading MultiHop-RAG benchmark (two configs: corpus + MultiHopRAG)...")
     t0 = time.time()
     from datasets import load_dataset
 
-    ds = load_dataset("yixuantt/MultiHopRAG")
-    out = data_dir / "multihop_rag"
-    ds.save_to_disk(str(out))
-    print(f"      saved to {out} in {time.time() - t0:.1f}s")
-    # Inspect the first record to verify qrels format
-    first_split = list(ds.keys())[0]
-    print(f"      sample record keys: {list(ds[first_split][0].keys())}")
+    # 'corpus' holds the 609 articles for indexing
+    corpus = load_dataset("yixuantt/MultiHopRAG", "corpus")
+    corpus.save_to_disk(str(data_dir / "multihop_rag_corpus"))
+    # 'MultiHopRAG' holds the Q/A records for eval
+    queries = load_dataset("yixuantt/MultiHopRAG", "MultiHopRAG")
+    queries.save_to_disk(str(data_dir / "multihop_rag_queries"))
+    print(f"      saved both configs in {time.time() - t0:.1f}s")
 
 
 def inspect_qrels_format(data_dir: Path) -> None:
-    print("[3/3] Inspecting qrels format...")
+    print("[3/3] Inspecting formats...")
     from datasets import load_from_disk
 
-    ds = load_from_disk(str(data_dir / "multihop_rag"))
-    for split in ds.keys():
-        rec = ds[split][0]
-        print(f"      [{split}] keys: {list(rec.keys())}")
-        if "evidence_list" in rec:
-            print(f"      evidence_list type: {type(rec['evidence_list']).__name__}")
-            if rec["evidence_list"]:
-                print(f"      evidence item keys: {list(rec['evidence_list'][0].keys())}")
-        print()
+    corpus_ds = load_from_disk(str(data_dir / "multihop_rag_corpus"))
+    for split in corpus_ds.keys():
+        rec = corpus_ds[split][0]
+        print(f"      corpus[{split}]: {len(corpus_ds[split])} rows, keys: {list(rec.keys())}")
+
+    queries_ds = load_from_disk(str(data_dir / "multihop_rag_queries"))
+    for split in queries_ds.keys():
+        rec = queries_ds[split][0]
+        print(f"      queries[{split}]: {len(queries_ds[split])} rows, keys: {list(rec.keys())}")
+        if "evidence_list" in rec and rec["evidence_list"]:
+            ev0 = rec["evidence_list"][0]
+            print(f"      evidence item keys: {list(ev0.keys()) if isinstance(ev0, dict) else type(ev0).__name__}")
 
 
 def main() -> int:
