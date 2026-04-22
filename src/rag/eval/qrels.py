@@ -22,6 +22,7 @@ class EvalQuery:
     query: str
     relevant_doc_ids: set[str]
     question_type: str = ""
+    category: str = ""  # most common category across evidence items
 
 
 def load_multihop_eval(queries_dir: Path) -> list[EvalQuery]:
@@ -36,12 +37,19 @@ def load_multihop_eval(queries_dir: Path) -> list[EvalQuery]:
             continue
         evidence = row.get("evidence_list", []) or []
         rel_ids: set[str] = set()
+        cat_counts: dict[str, int] = {}
         for ev in evidence:
-            url = ev.get("url") if isinstance(ev, dict) else None
+            if not isinstance(ev, dict):
+                continue
+            url = ev.get("url")
             if url:
                 rel_ids.add(url)
+            cat = ev.get("category", "")
+            if cat:
+                cat_counts[cat] = cat_counts.get(cat, 0) + 1
         if not rel_ids:
             continue
+        category = max(cat_counts, key=cat_counts.get) if cat_counts else ""
         qid = hashlib.md5(q.encode("utf-8")).hexdigest()[:12]
         out.append(
             EvalQuery(
@@ -49,6 +57,7 @@ def load_multihop_eval(queries_dir: Path) -> list[EvalQuery]:
                 query=q,
                 relevant_doc_ids=rel_ids,
                 question_type=row.get("question_type", ""),
+                category=category,
             )
         )
     return out

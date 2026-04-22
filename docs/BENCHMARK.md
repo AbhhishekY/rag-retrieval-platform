@@ -85,13 +85,17 @@ The qrels adapter (`src/rag/eval/qrels.py::load_multihop_eval`) does:
 for row in queries_dataset:
     evidence = row["evidence_list"]            # list of dicts
     rel_ids = {ev["url"] for ev in evidence}   # set of doc_ids
+    category = most_common(ev["category"] for ev in evidence)  # e.g. "technology"
     yield EvalQuery(
-        query_id = md5(query)[:12],
-        query    = row["query"],
+        query_id         = md5(query)[:12],
+        query            = row["query"],
         relevant_doc_ids = rel_ids,
         question_type    = row["question_type"],
+        category         = category,           # used by hybrid+metadata_filter config
     )
 ```
+
+The `category` field enables the `hybrid+metadata_filter` eval config: for each query, the harness passes `filters={"category": eq.category}` to the search engine, narrowing the candidate pool to articles in the same category as the ground-truth evidence. This tests what metadata-aware retrieval can achieve when the document domain is known.
 
 The corpus loader uses `row["url"]` as `doc_id`. Retrieval returns chunks; the harness dedupes chunks → docs (preserving rank) before scoring. So at evaluation, we're computing:
 

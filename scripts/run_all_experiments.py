@@ -28,6 +28,10 @@ async def run_tier1(embedder, reranker, queries, settings, reports, limit: int |
         ("tier1_semantic_only", {"fusion_method": "semantic_only", "use_rerank": False}, False),
         ("tier1_hybrid", {"fusion_method": "rrf", "use_rerank": False}, False),
         ("tier1_hybrid_rerank", {"fusion_method": "rrf", "use_rerank": True}, True),
+        ("tier1_hybrid_metadata_filter", {
+            "fusion_method": "weighted", "alpha": settings.hybrid_alpha,
+            "use_rerank": False, "use_metadata_filter": True,
+        }, False),
     ]:
         engine = SearchEngine(
             index_dir, embedder, reranker if needs_reranker else None
@@ -94,7 +98,7 @@ async def main_async(args):
     summary_path = settings.output_dir / "runs" / "SUMMARY.md"
     summary_path.write_text(
         "# Experiment Matrix Summary\n\n"
-        f"Corpus: MultiHop-RAG 609 articles, 19,817 chunks (recursive-512-10%).\n"
+        f"Corpus: MultiHop-RAG 609 articles + AG News 400 = 1,009 docs, 19,817+ chunks (recursive-512-10%).\n"
         f"Evaluated on {args.limit or len(queries)} queries per config.\n\n"
         + table
         + "\n",

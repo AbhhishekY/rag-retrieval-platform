@@ -24,6 +24,7 @@ Pydantic-settings over `.env`. Single source of truth for chunking defaults (512
 - `chunking.py::recursive_chunk` — pure function, 6 TDD tests. Char-based (deterministic); cascade on `\n\n → \n → . → space → chars`.
 - `loaders.py::load_multihop_from_hf` — streams 609 articles from HF disk, yields `Document` with metadata preserved.
 - `loaders.py::load_pdf` / `load_pdf_directory` — PyMuPDF extraction, graceful failure for unreadable PDFs.
+- `loaders.py::load_csv` / `load_csv_directory` — flexible CSV loader; maps common column name variants (`text`/`body`/`content`, `url`/`id`, `category`/`label`, etc.) to `Document` fields. Drop any CSV into `data/csvs/`, re-run `ingest.py`.
 - `manifest.py::IngestManifest` — SQLite table keyed on `doc_id` → `(content_sha256, chunk_count, indexed_at)`. `is_unchanged(doc_id, hash)` lets the pipeline skip re-embedding stable docs.
 - `pipeline.py::run_ingest` — orchestrator. Loads docs → chunks → embeds → builds BM25 + FAISS → writes all artifacts atomically to an `index_dir` subdir (`default/`, `chunk256/`, etc.).
 
@@ -43,14 +44,14 @@ Pydantic-settings over `.env`. Single source of truth for chunking defaults (512
 
 ### `src/rag/eval/`
 - `metrics.py` — `precision_at_k`, `recall_at_k`, `ndcg_at_k`. Pure, binary-relevance, 9 TDD tests.
-- `qrels.py::load_multihop_eval` — reads the MultiHop-RAG queries config, maps each `evidence_list` → `set[url]` as the relevant-doc ground truth.
+- `qrels.py::load_multihop_eval` — reads the MultiHop-RAG queries config, maps each `evidence_list` → `set[url]` as the relevant-doc ground truth. Also extracts `category` (most common across evidence items) into `EvalQuery.category` — used by the `hybrid+metadata_filter` eval config.
 - `harness.py::run_eval` — runs a batch of queries, isolates the first query's latency (cold-start), captures percentiles on the rest. Supports `concurrency=1` (accurate p95) and `concurrency>1` (throughput).
 - `reports.py` — `save_report` (JSON + markdown per config) and `combine_reports_table` (multi-config summary).
 
 ### `scripts/`
 - `preflight.py` — Hour-0 ritual: pre-download FastEmbed models + MultiHop-RAG corpus + queries + inspect formats.
 - `ingest.py` — CLI wrapper over `pipeline.run_ingest` with `--chunk-size`, `--overlap`, `--index-subdir`, `--force` flags.
-- `run_eval.py` — run one config (`semantic_only` | `hybrid` | `hybrid+rerank` | `bm25_only`), save one report.
+- `run_eval.py` — run one config (`semantic_only` | `hybrid` | `hybrid+rerank` | `bm25_only` | `hybrid+metadata_filter`), save one report.
 - `run_all_experiments.py` — matrix runner with `--tiers {1,2,3}` selector.
 - `analyze_bm25_wins.py` — per-query BM25-vs-semantic diff, writes top-10 BM25-wins to JSON.
 

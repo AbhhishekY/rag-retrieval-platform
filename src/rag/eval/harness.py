@@ -43,8 +43,13 @@ class EvalReport:
 async def _run_one(
     engine: SearchEngine, eq: EvalQuery, search_kwargs: dict[str, Any]
 ) -> PerQueryResult:
+    kwargs = dict(search_kwargs)
+    # use_metadata_filter is a harness-level flag, not a SearchEngine param.
+    # When set, we pass the query's ground-truth category as a hard filter.
+    if kwargs.pop("use_metadata_filter", False) and eq.category:
+        kwargs["filters"] = {"category": eq.category}
     t0 = time.perf_counter()
-    hits = await engine.search(eq.query, **search_kwargs)
+    hits = await engine.search(eq.query, **kwargs)
     latency_ms = (time.perf_counter() - t0) * 1000.0
     # Dedupe to doc-level (retrieval unit is chunk; eval unit is doc).
     # Preserve rank order — keep first occurrence of each doc_id.

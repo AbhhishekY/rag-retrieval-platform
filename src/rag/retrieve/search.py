@@ -53,6 +53,7 @@ class SearchEngine:
         rrf_k: int = C.RRF_K,
         use_rerank: bool = C.USE_RERANK_DEFAULT,
         filters: dict[str, Any] | None = None,
+        max_chunks_per_doc: int | None = None,
     ) -> list[SearchHit]:
         loop = asyncio.get_running_loop()
 
@@ -83,17 +84,30 @@ class SearchEngine:
                 if _metadata_matches(self.chunk_map.get(cid, {}).get("metadata", {}), filters)
             ]
 
+        # Apply per-doc diversity cap over the full fused pool before any cutoff.
+        # Prevents one dominant doc from filling multiple result slots.
+        if max_chunks_per_doc is not None:
+            doc_counts: dict[str, int] = {}
+            diverse: list[tuple[str, float]] = []
+            for cid, score in fused:
+                doc_id = self.chunk_map.get(cid, {}).get("doc_id", "")
+                if doc_counts.get(doc_id, 0) < max_chunks_per_doc:
+                    diverse.append((cid, score))
+                    doc_counts[doc_id] = doc_counts.get(doc_id, 0) + 1
+            fused = diverse
+
+        rerank_by_id: dict[str, float] = {}
         if use_rerank and self.reranker is not None and fused:
             candidates = [
-                (cid, self.chunk_map[cid]["text"]) for cid, _ in fused if cid in self.chunk_map
+                (cid, self.chunk_map[cid]["text"]) for cid, _ in fused[:top_k_final]
+                if cid in self.chunk_map
             ]
             reranked = await loop.run_in_executor(
                 None, self.reranker.rerank, query, candidates, top_k_final
             )
+            rerank_by_id = dict(reranked)
         else:
             reranked = [(cid, 0.0) for cid, _ in fused[:top_k_final]]
-
-        rerank_by_id = dict(reranked)
 
         hits: list[SearchHit] = []
         for cid, _ in reranked:
@@ -102,7 +116,7 @@ class SearchEngine:
                 continue
             final_score = (
                 rerank_by_id[cid]
-                if use_rerank and self.reranker is not None
+                if use_rerank and self.reranker is not None and cid in rerank_by_id
                 else fused_by_id.get(cid, 0.0)
             )
             hits.append(
@@ -114,7 +128,7 @@ class SearchEngine:
                         "bm25": bm25_by_id.get(cid, 0.0),
                         "semantic": dense_by_id.get(cid, 0.0),
                         "hybrid_fused": fused_by_id.get(cid, 0.0),
-                        "rerank": rerank_by_id.get(cid, 0.0) if use_rerank else 0.0,
+                        "rerank": rerank_by_id.get(cid, 0.0),
                         "final": final_score,
                     },
                     metadata=chunk.get("metadata", {}),

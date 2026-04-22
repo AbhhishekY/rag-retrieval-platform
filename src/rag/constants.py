@@ -27,12 +27,12 @@ TOP_K_RERANK: int = 20          # candidates passed to cross-encoder
 TOP_K_FINAL: int = 5            # results returned to caller
 
 # ─── Fusion ─────────────────────────────────────────────────────────────────
-FUSION_METHOD: str = "rrf"      # rrf | weighted | semantic_only | bm25_only
-HYBRID_ALPHA: float = 0.5       # used only when FUSION_METHOD == "weighted"
+FUSION_METHOD: str = "weighted"  # rrf | weighted | semantic_only | bm25_only
+HYBRID_ALPHA: float = 0.7       # used only when FUSION_METHOD == "weighted"
 RRF_K: int = 60                 # RRF standard constant (rarely tuned)
 
 # ─── Rerank behavior ────────────────────────────────────────────────────────
-USE_RERANK_DEFAULT: bool = True
+USE_RERANK_DEFAULT: bool = False
 
 # ─── Batch sizes (throughput-influencing) ──────────────────────────────────
 EMBED_BATCH_SIZE: int = 64      # docs per embedder forward pass

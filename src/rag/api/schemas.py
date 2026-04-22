@@ -3,12 +3,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from rag import constants as C
 
 
 class SearchRequest(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"query": "What did Goldman Sachs report about quarterly earnings?"}
+        }
+    )
+
     query: str = Field(..., min_length=1)
     top_k: int = Field(C.TOP_K_FINAL, ge=1, le=50)
     top_k_retrieve: int = Field(C.TOP_K_RETRIEVE, ge=5, le=500)
