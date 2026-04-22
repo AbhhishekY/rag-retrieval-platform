@@ -8,7 +8,7 @@ After ingest: **19,817 chunks** (recursive-512-10%).
 
 ## Stack
 
-All retrieval is local; Azure OpenAI (`gpt-4_1_dev_1`) is reserved for optional answer synthesis and is NOT on the retrieval critical path.
+Entirely local — no network calls on any retrieval path.
 
 | Component | Implementation | Why |
 |---|---|---|
@@ -101,10 +101,10 @@ In short: queries whose signal is carried by **low-frequency specific tokens** t
 The cold/warm gap is modest (~200 ms) — ONNX Runtime warm-up is faster than PyTorch's. First-query latency is reported separately (`first_query_latency_ms`) in every report so it's never folded into the p95 number.
 
 ### Cost per 1,000 queries
-See [`COST.md`](./COST.md). Retrieval is $0 (all local). Only generation incurs Azure billing if answer synthesis is added.
+See [`COST.md`](./COST.md). Retrieval is $0 — all components run in-process with no network calls. Only amortized hardware (negligible at this scale).
 
 ## What's NOT in v1 (honest scope)
 
 - **Tier 2/3 experiment sweeps not executed** — chunk-size (256 / 1024) and alpha (0.3 / 0.7) runs are scripted (`run_all_experiments.py --tiers 1 3 2`) but deferred to respect time budget. Current DEFENSE uses Tier 1 + BM25-diff analysis.
 - **PDF padding not included** — MultiHop-RAG provides 609 articles; the assignment asks for 1,000+. The mixed-format PDF pipeline (`load_pdf_directory`) is implemented and tested, but not populated. Adding 400 arXiv PDFs to the corpus is a 20-min follow-up.
-- **LLM answer synthesis** — out of retrieval scope; `gpt-4_1_dev_1` hookup plumbing is in `config.py` but no generation endpoint yet.
+- **LLM answer synthesis** — out of retrieval scope. No generation step or LLM dependency is wired in; the system is purely a retrieval platform.

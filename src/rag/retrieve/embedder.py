@@ -9,9 +9,11 @@ from __future__ import annotations
 import numpy as np
 from fastembed import TextEmbedding
 
+from rag import constants as C
+
 
 class Embedder:
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = C.EMBEDDING_MODEL):
         self.model_name = model_name
         self.model = TextEmbedding(model_name=model_name)
         probe = next(iter(self.model.embed(["probe"])))
@@ -21,7 +23,7 @@ class Embedder:
         vec = next(iter(self.model.embed([query])))
         return np.asarray(vec, dtype=np.float32)
 
-    def encode_docs(self, texts: list[str], batch_size: int = 64) -> np.ndarray:
+    def encode_docs(self, texts: list[str], batch_size: int = C.EMBED_BATCH_SIZE) -> np.ndarray:
         if not texts:
             return np.zeros((0, self.dim), dtype=np.float32)
         vecs = list(self.model.embed(texts, batch_size=batch_size))

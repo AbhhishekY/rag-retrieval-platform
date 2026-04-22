@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from rag import constants as C
 from rag.index.bm25_index import BM25Index
 from rag.index.vector_index import FaissFlatIndex
 from rag.retrieve.embedder import Embedder
@@ -44,13 +45,13 @@ class SearchEngine:
     async def search(
         self,
         query: str,
-        top_k_retrieve: int = 100,
-        top_k_rerank: int = 20,
-        top_k_final: int = 5,
-        fusion_method: str = "rrf",
-        alpha: float = 0.5,
-        rrf_k: int = 60,
-        use_rerank: bool = True,
+        top_k_retrieve: int = C.TOP_K_RETRIEVE,
+        top_k_rerank: int = C.TOP_K_RERANK,
+        top_k_final: int = C.TOP_K_FINAL,
+        fusion_method: str = C.FUSION_METHOD,
+        alpha: float = C.HYBRID_ALPHA,
+        rrf_k: int = C.RRF_K,
+        use_rerank: bool = C.USE_RERANK_DEFAULT,
         filters: dict[str, Any] | None = None,
     ) -> list[SearchHit]:
         loop = asyncio.get_running_loop()

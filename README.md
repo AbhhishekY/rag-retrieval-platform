@@ -13,7 +13,7 @@ source .venv/Scripts/activate         # Windows Git Bash
 # 2. Install dependencies
 pip install -e ".[dev]"
 
-# 3. Copy env template and edit if using Azure generation (optional)
+# 3. Copy env template (optional — all defaults in src/rag/constants.py)
 cp .env.example .env
 
 # 4. Run preflight (downloads models + benchmark corpus, ~5 min)
@@ -31,12 +31,12 @@ python scripts/run_eval.py --config hybrid+rerank
 
 ## Architecture
 
-- **Embeddings:** local `sentence-transformers/all-MiniLM-L6-v2` (384d, CPU, ~8ms/query)
+- **Embeddings:** FastEmbed (ONNX) `sentence-transformers/all-MiniLM-L6-v2` (384d, CPU, ~8ms/query)
 - **BM25:** local `rank_bm25`
 - **Vector index:** FAISS `IndexFlatIP` (exhaustive; optimal for <100K vectors)
-- **Reranker:** local `cross-encoder/ms-marco-MiniLM-L-6-v2` (~25ms/pair CPU, batched)
-- **Fusion:** RRF primary, α-weighted alternative (tunable via API)
-- **Generation:** optional Azure OpenAI `gpt-4_1_dev_1` (retrieval doesn't need it)
+- **Reranker:** FastEmbed (ONNX) `Xenova/ms-marco-MiniLM-L-6-v2` (CPU, batched)
+- **Fusion:** RRF primary, α-weighted alternative (tunable via API or `constants.py`)
+- **Tuning:** every knob (chunk size, overlap, top-k, fusion, batch sizes, models) lives in one file — `src/rag/constants.py`
 
 ## Deliverables
 

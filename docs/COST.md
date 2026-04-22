@@ -10,30 +10,25 @@
 | RRF fusion | <1 ms | **$0** |
 | Cross-encoder rerank top-20 (optional, CPU) | ~900 ms compute | **$0** |
 
-**Retrieval subtotal: $0 external spend per 1,000 queries.**
+**Total external spend per 1,000 queries: $0.**
 
-The only cost is amortized hardware. On a commodity c6i.xlarge (~$0.17/hr = ~$124/mo), sustained at 1 QPS that's ~$0.004 per 1,000 queries. Still a rounding error.
+Every component — embedder, BM25, vector index, cross-encoder reranker — runs in-process via CPU. No network calls, no API keys, no rate limits.
 
-## Optional answer synthesis via Azure OpenAI (`gpt-4_1_dev_1`)
+## Hardware amortization
 
-If the system is extended with a RAG answer-synthesis step, per-query cost depends on context size and output length. Illustrative: 500 tokens of retrieved context + 100 tokens query + 200 tokens answer.
+The only real cost is the machine running the service. On a commodity c6i.xlarge (~$0.17/hr ≈ $124/mo), sustained at 1 QPS that's **~$0.004 per 1,000 queries**. A rounding error.
 
-Fill in from your actual Azure pricing sheet for the `gpt-4.1` family:
+Run local on a developer laptop and it's free (ignoring electricity).
 
-| Component | Tokens / 1K queries | Rate (from Azure) | Cost / 1K |
-|---|---:|---:|---:|
-| Input | 600,000 | $___/1M | ~$___ |
-| Output | 200,000 | $___/1M | ~$___ |
-| **Total / 1K queries** | — | — | **~$___** |
-
-As of public pricing for `gpt-4o` (analog of 4.1-class models): ~$2.50/1M input + $10.00/1M output → ~$3.50/1K queries for this context budget. Generation dominates the cost structure if added.
-
-## Ingest (one-time, per corpus)
+## Ingest cost (one-time, per corpus)
 
 All-local — no external calls during ingestion either. Wall-time on MultiHop-RAG (609 docs → 19,817 chunks) was well under one minute of embedding + indexing on CPU. **$0** external.
 
+Incremental ingest (`ingest_manifest.db` SHA-256 tracking) means re-running on unchanged docs is O(1) — no re-embedding. Adding 100 new docs to a 609-doc corpus re-embeds only those 100.
+
 ## Summary
 
-- **Status-quo retrieval:** $0 per 1K queries, all in-process.
-- **Add generation:** ~$3.50 per 1K queries (assuming 4o-class rates, typical context).
-- **Hardware:** rounding error ($0.004/1K at 1 QPS sustained on a small VM).
+- **Retrieval:** $0 per 1K queries.
+- **Ingest:** $0 external.
+- **Hardware:** ~$0.004 per 1K queries amortized on a $125/mo VM (negligible).
+- **No vendor lock-in:** the stack is pip-installable and fully open.

@@ -13,6 +13,7 @@ from typing import Iterable
 
 from tqdm import tqdm
 
+from rag import constants as C
 from rag.index.bm25_index import BM25Index
 from rag.index.vector_index import FaissFlatIndex
 from rag.ingest.chunking import recursive_chunk
@@ -38,10 +39,10 @@ def chunk_document(doc: Document, chunk_size: int, overlap: int) -> list[Chunk]:
 def run_ingest(
     docs: Iterable[Document],
     index_dir: Path,
-    chunk_size: int = 512,
-    overlap: int = 51,
-    embedder_model: str = "sentence-transformers/all-MiniLM-L6-v2",
-    embed_batch_size: int = 64,
+    chunk_size: int = C.CHUNK_SIZE,
+    overlap: int = C.CHUNK_OVERLAP,
+    embedder_model: str = C.EMBEDDING_MODEL,
+    embed_batch_size: int = C.EMBED_BATCH_SIZE,
     force: bool = False,
 ) -> dict:
     index_dir.mkdir(parents=True, exist_ok=True)
