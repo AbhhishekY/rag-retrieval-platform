@@ -46,4 +46,4 @@ python scripts/run_eval.py --config hybrid+rerank
 - p95 latency profile (cold/warm)
 - Cost-per-1K-queries projection
 
-See [`docs/PLAN.md`](docs/PLAN.md) for the full implementation plan and [`_bmad-output/brainstorming/`](../) for the design session that produced it.
+See [`docs/superpowers/plans/2026-04-22-retrieval-platform.md`](docs/superpowers/plans/2026-04-22-retrieval-platform.md) for the full implementation plan (32 tasks) and `_bmad-output/brainstorming/` for the design session that produced it.

@@ -43,3 +43,6 @@ sentence_transformers_cache/
 # BMad session output (brainstorming lives outside repo anyway via _bmad-output)
 _bmad-output/
 _bmad/
+
+# Claude Code local tooling
+.claude/
